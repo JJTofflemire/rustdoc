@@ -40,14 +40,12 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        
+        // start a rudimentary built-in top drop-down menu
         egui::TopBottomPanel::top("hi").show(ctx, |ui| {
-            ui.label("Hello World!");
-
+            
             menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open file").clicked() {
-                        // …
                     }
                 });
             });
@@ -55,11 +53,13 @@ impl eframe::App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
 
+            // define fonts unsed in central panel
             let body_font_id = FontId::new(12.0, FontFamily::default());
             let title_font_id = FontId::new(17.0, FontFamily::default());
 
             ui.vertical_centered(|ui| {
 
+                // title text box
                 let title_edit = TextEdit::singleline(&mut self.title_text)
                     .font(title_font_id)//;
                     .horizontal_align(Align::Center)
@@ -68,10 +68,10 @@ impl eframe::App for MyApp {
                 let save_title = ui.add(title_edit);
 
                 if save_title.changed() {
-                    // i need to find a way to input old_name as the output of old_name from the last time it ran
                     self.old_name = change_title(self.old_name.clone(), self.title_text.clone());
                 }
 
+                // body text box
                 let text_edit = TextEdit::multiline(&mut self.body_text)
                     .font(body_font_id)
                     .lock_focus(true)
@@ -90,6 +90,7 @@ impl eframe::App for MyApp {
     }
 }
 
+// a function that changes the name of the file being edited and returns the new name
 pub fn change_title(old_title: String, new_title: String) -> String {
 
     let new_name = format!("{}.md", new_title);
@@ -101,6 +102,7 @@ pub fn change_title(old_title: String, new_title: String) -> String {
     new_name
 }
 
+// a function that saves all the text in the body text box to a file with the name from the title text box
 pub fn save_file(text: String, title: String) {
     let file_path = format!("{}.md", title);
     match fs::write(file_path.clone(), text) {
@@ -108,3 +110,4 @@ pub fn save_file(text: String, title: String) {
         Err(e) => eprintln!("Error saving text to {}: {}", file_path, e),
     }
 }
+
