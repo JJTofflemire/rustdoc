@@ -1,2 +1,3 @@
 # rustdoc
-a personal knowledge manager written in rust
+
+- a rust utlity for structured text documentation
