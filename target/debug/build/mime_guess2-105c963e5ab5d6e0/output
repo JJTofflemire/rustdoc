@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/andybabcock/git-repos/rustdoc/target/debug/build/mime_guess2-105c963e5ab5d6e0/out/mime_types_generated.rs
