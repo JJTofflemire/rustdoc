@@ -1,0 +1,21 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.72"
+publish = false
+
+
+[dependencies]
+eframe = { version = "0.24.1", features = [
+    "__screenshot", # __screenshot is so we can dump a screenshot using EFRAME_SCREENSHOT_TO
+] }
+
+egui_extras = { version = "0.24.2", features = ["image"] }
+
+env_logger = { version = "0.10", default-features = false, features = [
+    "auto-color",
+    "humantime",
+] }
