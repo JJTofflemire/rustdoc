@@ -1,7 +1,28 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::fs;
-use eframe::{egui::{self, TextEdit, menu}, epaint::{FontFamily, FontId}, emath::Align};
+use std::{env, path::PathBuf};
+
+use eframe::{egui::{self, TextEdit, menu, DroppedFile, Widget}, epaint::{FontFamily, FontId}, emath::Align};
+mod file_management;
+use file_management::{change_title, save_file, open_file};
+
+struct MyApp {
+    body_text: String,
+    title_text: String,
+    old_name: String,
+    working_dir: PathBuf,
+}
+
+impl Default for MyApp {
+    fn default() -> Self {
+        Self {
+            body_text: "".to_owned(),
+            title_text: "untitled".to_owned(),
+            old_name: "untitled.md".to_owned(),
+            working_dir: env::current_dir().expect("Failed to get current directory"),
+        }
+    }
+}
 
 fn main() -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -10,7 +31,7 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "rustidian",
+        "rustdoc",
         options,
         Box::new(|cc| {
             // This gives us image support:
@@ -21,22 +42,6 @@ fn main() -> Result<(), eframe::Error> {
     )
 }
 
-struct MyApp {
-    body_text: String,
-    title_text: String,
-    old_name: String,
-}
-
-impl Default for MyApp {
-    fn default() -> Self {
-        Self {
-            body_text: "".to_owned(),
-            title_text: "untitled".to_owned(),
-            old_name: "untitled.md".to_owned(),
-        }
-    }
-}
-
 impl eframe::App for MyApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -44,8 +49,9 @@ impl eframe::App for MyApp {
         egui::TopBottomPanel::top("hi").show(ctx, |ui| {
             
             menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open file").clicked() {
+                ui.menu_button("file", |ui| {
+                    if ui.button("open file").clicked() {
+                        open_file(self.working_dir.clone());
                     }
                 });
             });
@@ -87,27 +93,10 @@ impl eframe::App for MyApp {
 
             });
         });
+
+// attempting to implement drag and drop file support, but there is little documentation on this
+//        for event in ui.input(|i| i.raw.dropped_files.clone()) {
+//            dropped_file = Some(event);
+
     }
 }
-
-// a function that changes the name of the file being edited and returns the new name
-pub fn change_title(old_title: String, new_title: String) -> String {
-
-    let new_name = format!("{}.md", new_title);
-
-    match fs::rename(old_title.clone(), new_name.clone()) {
-        Ok(()) => println!("File renamed from {} to {} successfully", old_title, new_name),
-        Err(e) => eprintln!("Error renaming file: {}", e),
-    }
-    new_name
-}
-
-// a function that saves all the text in the body text box to a file with the name from the title text box
-pub fn save_file(text: String, title: String) {
-    let file_path = format!("{}.md", title);
-    match fs::write(file_path.clone(), text) {
-        Ok(_) => println!("Text saved to {}", file_path),
-        Err(e) => eprintln!("Error saving text to {}: {}", file_path, e),
-    }
-}
-
