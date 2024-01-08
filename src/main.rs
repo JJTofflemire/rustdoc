@@ -2,7 +2,7 @@
 
 use std::{env, path::PathBuf};
 
-use eframe::{egui::{self, TextEdit, menu, DroppedFile, Widget}, epaint::{FontFamily, FontId}, emath::Align};
+use eframe::{egui::{self, TextEdit, menu}, epaint::{FontFamily, FontId}, emath::Align};
 mod file_management;
 use file_management::{change_title, save_file, open_file};
 
@@ -25,7 +25,7 @@ impl Default for MyApp {
 }
 
 fn main() -> Result<(), eframe::Error> {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    env_logger::init();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 640.0]),
         ..Default::default()
@@ -50,8 +50,12 @@ impl eframe::App for MyApp {
             
             menu::bar(ui, |ui| {
                 ui.menu_button("file", |ui| {
-                    if ui.button("open file").clicked() {
-                        open_file(self.working_dir.clone());
+                    if ui.button("add file").clicked() {
+                        let file_data_output = open_file(self.working_dir.clone());
+
+                        self.body_text = file_data_output.new_body_text;
+                        self.title_text = file_data_output.new_title_text_short;
+                        self.old_name = file_data_output.new_old_title_text_short;
                     }
                 });
             });
