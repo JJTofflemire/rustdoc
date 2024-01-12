@@ -68,3 +68,39 @@ pub fn open_file(working_dir: PathBuf) -> FileData {
         new_old_title_text_short,
     }
 }
+
+// list all files and folders, and output as a vector
+pub fn list_files_in_directory(working_dir: &PathBuf) -> Result<Vec<String>, std::io::Error> {
+    let entries = fs::read_dir(working_dir)?;
+
+    let mut result = Vec::new();
+
+    for entry in entries {
+        let entry = entry?;
+        let file_name = entry.file_name();
+        result.push(file_name.to_string_lossy().to_string());
+    }
+
+    Ok(result)
+}
+
+pub fn explorer_open_file(working_dir: &PathBuf, file: String) -> FileData {
+
+    let new_old_title_text_short = file.chars().take(file.len() - 3).collect();
+    let new_title_text_short = file.chars().take(file.len() - 3).collect();
+
+    let new_file_path = format!("{}/{}", working_dir.display(), file);
+    let new_body_text = match fs::read_to_string(&new_file_path) {
+        Ok(contents) => contents,
+        Err(e) => {
+            eprintln!("Error reading file {}: {}", file, e);
+            String::new() // or handle the error in a different way, e.g., return an error variant
+        }
+    };
+
+    FileData {
+        new_body_text,
+        new_title_text_short,
+        new_old_title_text_short,
+    }
+}

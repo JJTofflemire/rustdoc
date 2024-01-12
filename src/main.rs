@@ -1,10 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, os::unix::fs::FileExt};
 
-use eframe::{egui::{self, TextEdit, menu}, epaint::{FontFamily, FontId}, emath::Align};
+use eframe::{egui::{self, TextEdit, menu, RichText, Sense, Label}, epaint::{FontFamily, FontId}, emath::Align};
 mod file_management;
-use file_management::{change_title, save_file, open_file};
+use file_management::{change_title, save_file, open_file, list_files_in_directory, explorer_open_file};
 
 struct MyApp {
     body_text: String,
@@ -51,6 +51,10 @@ impl eframe::App for MyApp {
             menu::bar(ui, |ui| {
                 ui.menu_button("file", |ui| {
                     if ui.button("add file").clicked() {
+                        // match file {
+                            // .md => ;
+                        // }
+
                         let file_data_output = open_file(self.working_dir.clone());
 
                         self.body_text = file_data_output.new_body_text;
@@ -61,6 +65,25 @@ impl eframe::App for MyApp {
             });
          });
 
+         egui::SidePanel::left("ls panel").show(ctx, |ui| {
+            match list_files_in_directory(&self.working_dir) {
+                Ok(files) => {
+                    for file in files {
+                        if ui.add(Label::new(&file).sense(Sense::click())).clicked() {
+                            // println!("{}", file);
+                            let file_data_output = explorer_open_file(&self.working_dir.clone(), file);
+
+                            self.body_text = file_data_output.new_body_text;
+                            self.title_text = file_data_output.new_title_text_short;
+                            self.old_name = file_data_output.new_old_title_text_short;
+                        }
+                    }
+                }
+                Err(err) => eprintln!("Error: {}", err),
+            }
+         });
+
+        // central panel with title and body text boxes
         egui::CentralPanel::default().show(ctx, |ui| {
 
             // define fonts unsed in central panel
