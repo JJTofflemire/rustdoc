@@ -3,7 +3,7 @@
 use std::{env, path::PathBuf};
 
 use eframe::{
-    egui::{self, menu, scroll_area, ScrollArea, TextEdit, Ui},
+    egui::{self, menu, scroll_area, ScrollArea, TextEdit},
     emath::Align,
     epaint::{FontFamily, FontId},
 };
