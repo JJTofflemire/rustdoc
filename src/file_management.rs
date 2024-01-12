@@ -69,8 +69,22 @@ pub fn open_file(working_dir: PathBuf) -> FileData {
     }
 }
 
+#[derive(Debug)]
+pub enum FileType {
+    File,
+    Directory,
+    Markdown,
+    // Add more file types as needed
+}
+
+#[derive(Debug)]
+pub struct FileEntry {
+    pub name: String,
+    pub file_type: FileType,
+}
+
 // list all files and folders, and output as a vector
-pub fn list_files_in_directory(working_dir: &PathBuf) -> Result<Vec<String>, std::io::Error> {
+pub fn list_files_in_directory(working_dir: &PathBuf) -> Result<Vec<FileEntry>, std::io::Error> {
     let entries = fs::read_dir(working_dir)?;
 
     let mut result = Vec::new();
@@ -78,7 +92,17 @@ pub fn list_files_in_directory(working_dir: &PathBuf) -> Result<Vec<String>, std
     for entry in entries {
         let entry = entry?;
         let file_name = entry.file_name();
-        result.push(file_name.to_string_lossy().to_string());
+        let file_type = if entry.file_type()?.is_dir() {
+            FileType::Directory
+        } else if file_name.to_string_lossy().ends_with(".md") {
+            FileType::Markdown
+        } else {
+            FileType::File
+        };
+        result.push(FileEntry {
+            name: file_name.to_string_lossy().to_string(),
+            file_type,
+        });
     }
 
     Ok(result)
@@ -103,4 +127,8 @@ pub fn explorer_open_file(working_dir: &PathBuf, file: String) -> FileData {
         new_title_text_short,
         new_old_title_text_short,
     }
+}
+
+pub fn display_explorer() {
+    
 }

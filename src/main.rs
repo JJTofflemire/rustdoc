@@ -1,10 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{env, path::PathBuf, os::unix::fs::FileExt};
+use std::{env, path::PathBuf, os::unix::fs::FileExt, fs::File};
 
-use eframe::{egui::{self, TextEdit, menu, RichText, Sense, Label}, epaint::{FontFamily, FontId}, emath::Align};
+use eframe::{egui::{self, TextEdit, menu, RichText, Sense, Label, Ui, collapsing_header, CollapsingHeader}, epaint::{FontFamily, FontId}, emath::Align};
 mod file_management;
-use file_management::{change_title, save_file, open_file, list_files_in_directory, explorer_open_file};
+use file_management::{change_title, save_file, open_file, list_files_in_directory, explorer_open_file, FileType};
 
 struct MyApp {
     body_text: String,
@@ -51,9 +51,6 @@ impl eframe::App for MyApp {
             menu::bar(ui, |ui| {
                 ui.menu_button("file", |ui| {
                     if ui.button("add file").clicked() {
-                        // match file {
-                            // .md => ;
-                        // }
 
                         let file_data_output = open_file(self.working_dir.clone());
 
@@ -66,16 +63,28 @@ impl eframe::App for MyApp {
          });
 
          egui::SidePanel::left("ls panel").show(ctx, |ui| {
-            match list_files_in_directory(&self.working_dir) {
-                Ok(files) => {
-                    for file in files {
-                        if ui.add(Label::new(&file).sense(Sense::click())).clicked() {
-                            // println!("{}", file);
-                            let file_data_output = explorer_open_file(&self.working_dir.clone(), file);
 
-                            self.body_text = file_data_output.new_body_text;
-                            self.title_text = file_data_output.new_title_text_short;
-                            self.old_name = file_data_output.new_old_title_text_short;
+            match list_files_in_directory(&self.working_dir) {
+                Ok(entries) => {
+                    for entry in entries {
+                        match entry.file_type {
+                            FileType::Directory => {
+                                CollapsingHeader::new(&entry.name).show(ui, |ui| {
+                                    // Add UI components specific to directories
+                                    ui.label("This is a directory!");
+                                });
+                            }
+                            FileType::Markdown => {
+                                if ui.add(Label::new(&entry.name).sense(Sense::click())).clicked() {
+                                    //println!("{}", entry.name);
+                                    let file_data_output = explorer_open_file(&self.working_dir.clone(), entry.name);
+        
+                                    self.body_text = file_data_output.new_body_text;
+                                    self.title_text = file_data_output.new_title_text_short;
+                                    self.old_name = file_data_output.new_old_title_text_short;
+                                }
+                            }
+                            FileType::File => println!("Other file: {}", entry.name),
                         }
                     }
                 }
