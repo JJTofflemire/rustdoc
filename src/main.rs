@@ -1,10 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{env, path::PathBuf, os::unix::fs::FileExt, fs::File};
+use std::{env, path::PathBuf};
 
-use eframe::{egui::{self, TextEdit, menu, RichText, Sense, Label, Ui, collapsing_header, CollapsingHeader}, epaint::{FontFamily, FontId}, emath::Align};
+use eframe::{
+    egui::{self, menu, scroll_area, ScrollArea, TextEdit, Ui},
+    emath::Align,
+    epaint::{FontFamily, FontId},
+};
 mod file_management;
-use file_management::{change_title, save_file, open_file, list_files_in_directory, explorer_open_file, FileType};
+use file_management::{change_title, display_explorer, open_file, save_file};
 
 struct MyApp {
     body_text: String,
@@ -43,15 +47,12 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 impl eframe::App for MyApp {
-
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // start a rudimentary built-in top drop-down menu
         egui::TopBottomPanel::top("hi").show(ctx, |ui| {
-            
             menu::bar(ui, |ui| {
                 ui.menu_button("file", |ui| {
                     if ui.button("add file").clicked() {
-
                         let file_data_output = open_file(self.working_dir.clone());
 
                         self.body_text = file_data_output.new_body_text;
@@ -60,79 +61,60 @@ impl eframe::App for MyApp {
                     }
                 });
             });
-         });
+        });
 
-         egui::SidePanel::left("ls panel").show(ctx, |ui| {
-
-            match list_files_in_directory(&self.working_dir) {
-                Ok(entries) => {
-                    for entry in entries {
-                        match entry.file_type {
-                            FileType::Directory => {
-                                CollapsingHeader::new(&entry.name).show(ui, |ui| {
-                                    // Add UI components specific to directories
-                                    ui.label("This is a directory!");
-                                });
-                            }
-                            FileType::Markdown => {
-                                if ui.add(Label::new(&entry.name).sense(Sense::click())).clicked() {
-                                    //println!("{}", entry.name);
-                                    let file_data_output = explorer_open_file(&self.working_dir.clone(), entry.name);
-        
-                                    self.body_text = file_data_output.new_body_text;
-                                    self.title_text = file_data_output.new_title_text_short;
-                                    self.old_name = file_data_output.new_old_title_text_short;
-                                }
-                            }
-                            FileType::File => println!("Other file: {}", entry.name),
-                        }
-                    }
+        egui::SidePanel::left("ls panel").show(ctx, |ui| {
+            ScrollArea::vertical().show(ui, |ui| match display_explorer(&self.working_dir, ui) {
+                Some(file_data_output) => {
+                    self.body_text = file_data_output.new_body_text;
+                    self.title_text = file_data_output.new_title_text_short;
+                    self.old_name = file_data_output.new_old_title_text_short;
+                    self.working_dir = file_data_output.new_working_dir;
                 }
-                Err(err) => eprintln!("Error: {}", err),
-            }
-         });
-
-        // central panel with title and body text boxes
-        egui::CentralPanel::default().show(ctx, |ui| {
-
-            // define fonts unsed in central panel
-            let body_font_id = FontId::new(12.0, FontFamily::default());
-            let title_font_id = FontId::new(17.0, FontFamily::default());
-
-            ui.vertical_centered(|ui| {
-
-                // title text box
-                let title_edit = TextEdit::singleline(&mut self.title_text)
-                    .font(title_font_id)//;
-                    .horizontal_align(Align::Center)
-                    .desired_width(700.0)
-                    .hint_text("title");
-                let save_title = ui.add(title_edit);
-
-                if save_title.changed() {
-                    self.old_name = change_title(self.old_name.clone(), self.title_text.clone());
-                }
-
-                // body text box
-                let text_edit = TextEdit::multiline(&mut self.body_text)
-                    .font(body_font_id)
-                    .lock_focus(true)
-                    .desired_rows(1)
-                    .desired_width(700.0)
-                    .hint_text("body text");
-                    //.frame(false);
-                let save_body = ui.add(text_edit);
-
-                if save_body.changed() {
-                    save_file(self.body_text.clone(), self.title_text.clone());
-                }
-
+                None => {}
             });
         });
 
-// attempting to implement drag and drop file support, but there is little documentation on this
-//        for event in ui.input(|i| i.raw.dropped_files.clone()) {
-//            dropped_file = Some(event);
+        // central panel with title and body text boxes
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ScrollArea::vertical().show(ui, |ui| {
+                // define fonts unsed in central panel
+                let body_font_id = FontId::new(12.0, FontFamily::default());
+                let title_font_id = FontId::new(17.0, FontFamily::default());
 
+                ui.vertical_centered(|ui| {
+                    // title text box
+                    let title_edit = TextEdit::singleline(&mut self.title_text)
+                        .font(title_font_id) //;
+                        .horizontal_align(Align::Center)
+                        .desired_width(700.0)
+                        .hint_text("title");
+                    let save_title = ui.add(title_edit);
+
+                    if save_title.changed() {
+                        self.old_name =
+                            change_title(self.old_name.clone(), self.title_text.clone());
+                    }
+
+                    // body text box
+                    let text_edit = TextEdit::multiline(&mut self.body_text)
+                        .font(body_font_id)
+                        .lock_focus(true)
+                        .desired_rows(1)
+                        .desired_width(700.0)
+                        .hint_text("body text");
+                    //.frame(false);
+                    let save_body = ui.add(text_edit);
+
+                    if save_body.changed() {
+                        save_file(self.body_text.clone(), self.title_text.clone(), self.working_dir.clone());
+                    }
+                });
+            });
+        });
+
+        // attempting to implement drag and drop file support, but there is little documentation on this
+        //        for event in ui.input(|i| i.raw.dropped_files.clone()) {
+        //            dropped_file = Some(event);
     }
 }

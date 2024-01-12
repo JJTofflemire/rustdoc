@@ -13,4 +13,3 @@
 - [ ] add case for if the `add file` is in the working directory (if needed)
 
 - [ ] make `add file` / `add folder` remember the path used last time
-
