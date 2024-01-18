@@ -12,6 +12,8 @@
 
 - [ ] seperate `working_dir` and `explorer_dir` so that the explorer expands from root dir instead of only showing the clicked folder
 
+    - it is difficult to implement this because there are difficulties with managing which directory to write to without messing up the display_explorer function
+
 - [ ] add dialog to choose folder and remember folder
 
   - use the [directories crate](https://docs.rs/directories/5.0.1/directories/struct.BaseDirs.html) to access a platform-agnostic cache
