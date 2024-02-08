@@ -1,20 +1,23 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{env, path::PathBuf};
+use std::{
+    env, fmt::format, fs, path::{Path, PathBuf}, process::ExitStatus
+};
 
 use eframe::{
-    egui::{self, menu, scroll_area, ScrollArea, TextEdit},
+    egui::{self, menu, ScrollArea, TextEdit},
     emath::Align,
     epaint::{FontFamily, FontId},
 };
 mod file_management;
-use file_management::{change_title, display_explorer, open_file, save_file};
+use file_management::{change_title, display_explorer, open_dir, open_file, save_file};
 
 struct MyApp {
     body_text: String,
     title_text: String,
     old_name: String,
     working_dir: PathBuf,
+    config_dir: PathBuf,
 }
 
 impl Default for MyApp {
@@ -24,6 +27,10 @@ impl Default for MyApp {
             title_text: "untitled".to_owned(),
             old_name: "untitled.md".to_owned(),
             working_dir: env::current_dir().expect("Failed to get current directory"),
+            config_dir: directories::BaseDirs::new()
+                .unwrap()
+                .config_dir()
+                .to_path_buf(),
         }
     }
 }
@@ -34,6 +41,7 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 640.0]),
         ..Default::default()
     };
+
     eframe::run_native(
         "rustdoc",
         options,
@@ -41,9 +49,23 @@ fn main() -> Result<(), eframe::Error> {
             // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            Box::<MyApp>::default()
+            let mut app = MyApp::default();
+            app.startup();
+            Box::new(app)
         }),
     )
+}
+
+impl MyApp {
+    fn startup(&mut self) {
+        let rust_config_dir = format!("{}/rustdoc", self.config_dir.display());
+        if !Path::new(rust_config_dir.as_str()).exists() {
+            match fs::create_dir(rust_config_dir) {
+                Ok(_) => (),
+                Err(e) => eprintln!("{}", e),
+            }
+        }
+    }
 }
 
 impl eframe::App for MyApp {
@@ -53,12 +75,26 @@ impl eframe::App for MyApp {
             menu::bar(ui, |ui| {
                 ui.menu_button("file", |ui| {
                     if ui.button("add file").clicked() {
-                        let file_data_output = open_file(self.working_dir.clone());
-
-                        self.body_text = file_data_output.new_body_text;
-                        self.title_text = file_data_output.new_title_text_short;
-                        self.old_name = file_data_output.new_old_title_text_short;
+                        match open_file(self.working_dir.clone()) {
+                            Some(file_data_output_real) => {
+                                self.body_text = file_data_output_real.new_body_text;
+                                self.title_text = file_data_output_real.new_title_text_short;
+                                self.old_name = file_data_output_real.new_old_title_text_short;
+                            }
+                            None => (),
+                        }
                     }
+                    ui.collapsing("open new directory", |ui| {
+                        ui.collapsing("previous directories", |ui| {
+                            // read a previous folders json and output as buttons
+                        });
+                        if ui.button("add new directory").clicked() {
+                            match open_dir() {
+                                Some(new_working_dir) => self.working_dir = new_working_dir,
+                                None => (),
+                            }
+                        }
+                    });
                 });
             });
         });
@@ -107,7 +143,11 @@ impl eframe::App for MyApp {
                     let save_body = ui.add(text_edit);
 
                     if save_body.changed() {
-                        save_file(self.body_text.clone(), self.title_text.clone(), self.working_dir.clone());
+                        save_file(
+                            self.body_text.clone(),
+                            self.title_text.clone(),
+                            self.working_dir.clone(),
+                        );
                     }
                 });
             });
